@@ -2,7 +2,6 @@ import os
 import openpyxl
 import tkinter as tk
 from tkinter import filedialog, messagebox
-from PIL import Image, ImageTk
 
 # Function to parse the log file and extract relevant data
 def parse_log_file(file_path):
@@ -76,26 +75,18 @@ def start_parsing():
 root = tk.Tk()
 root.title("Log File Parser")
 
-# Load and display the company logo (resize it to a smaller size)
-logo_path = r'C:\Users\chets\Downloads\ACAP COMBINED LONGWAYS_COLOR (1).png'
-logo_image = Image.open(logo_path)
-logo_image = logo_image.resize((200, 50), Image.LANCZOS)  # Resize the image to 200x50 pixels
-logo_photo = ImageTk.PhotoImage(logo_image)
-logo_label = tk.Label(root, image=logo_photo)
-logo_label.grid(row=0, column=1, pady=10)
-
 # Create and place widgets
-tk.Label(root, text="Main Directory:").grid(row=1, column=0, padx=10, pady=10)
+tk.Label(root, text="Main Directory:").grid(row=0, column=0, padx=10, pady=10)
 main_dir_entry = tk.Entry(root, width=50)
-main_dir_entry.grid(row=1, column=1, padx=10, pady=10)
-tk.Button(root, text="Browse", command=select_main_directory).grid(row=1, column=2, padx=10, pady=10)
+main_dir_entry.grid(row=0, column=1, padx=10, pady=10)
+tk.Button(root, text="Browse", command=select_main_directory).grid(row=0, column=2, padx=10, pady=10)
 
-tk.Label(root, text="Output Directory:").grid(row=2, column=0, padx=10, pady=10)
+tk.Label(root, text="Output Directory:").grid(row=1, column=0, padx=10, pady=10)
 output_dir_entry = tk.Entry(root, width=50)
-output_dir_entry.grid(row=2, column=1, padx=10, pady=10)
-tk.Button(root, text="Browse", command=select_output_directory).grid(row=2, column=2, padx=10, pady=10)
+output_dir_entry.grid(row=1, column=1, padx=10, pady=10)
+tk.Button(root, text="Browse", command=select_output_directory).grid(row=1, column=2, padx=10, pady=10)
 
-tk.Button(root, text="Start Parsing", command=start_parsing).grid(row=3, columnspan=3, pady=20)
+tk.Button(root, text="Start Parsing", command=start_parsing).grid(row=2, columnspan=3, pady=20)
 
 # Run the application
 root.mainloop()
