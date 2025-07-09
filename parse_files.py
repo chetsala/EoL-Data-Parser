@@ -3,16 +3,16 @@ import time
 import json
 import threading
 import sqlite3
-import openpyxl
 import requests
+import csv
 from pystray import Icon, MenuItem as item, Menu
 from PIL import Image, ImageDraw
 
-# Set your paths here
+# === CONFIGURATION ===
 SOURCE_DIRECTORY = r"C:\Users\chets\OneDrive - aquacal.com\Desktop\ChlorSync Powercenter Test Results"
-SHAREPOINT_EXCEL_PATH = r"O:\Files\AutoPilot\Power Center EoL Database\parsed_log_data.xlsx"
+SHAREPOINT_CSV_PATH = r"O:\Files\AutoPilot\Power Center EoL Database\parsed_log_data.csv"
 
-# SQLite setup
+# === SETUP DATABASE TO TRACK PARSED FILES ===
 conn = sqlite3.connect("local_cache.db")
 cursor = conn.cursor()
 cursor.execute("""
@@ -21,7 +21,15 @@ CREATE TABLE IF NOT EXISTS logs (
     data TEXT
 )
 """)
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS processed_logs (
+    file_path TEXT PRIMARY KEY
+)
+""")
 conn.commit()
+conn.close()
+
+# === UTILITIES ===
 
 def is_connected():
     try:
@@ -39,75 +47,71 @@ def parse_log_file(file_path):
                 data[key.strip()] = value.strip()
     return data
 
-def cache_locally(data):
-    # Open a new connection in the current thread
+def append_to_csv(new_data):
+    if not new_data:
+        return
+
+    # Filter only records with "Failure Reason" == "None"
+    filtered_data = [
+        record for record in new_data
+        if record.get("Failure Reason", "").strip().lower() == "none"
+    ]
+
+    if not filtered_data:
+        return
+
+    file_exists = os.path.isfile(SHAREPOINT_CSV_PATH)
+
+    # Determine headers from all data
+    all_headers = set()
+    for record in filtered_data:
+        all_headers.update(record.keys())
+    headers = list(all_headers)
+
+    # Write to CSV (append mode)
+    with open(SHAREPOINT_CSV_PATH, mode='a', newline='', encoding='utf-8') as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=headers)
+        if not file_exists:
+            writer.writeheader()
+        for record in filtered_data:
+            writer.writerow(record)
+
+def parse_and_process():
+    new_data = []
     conn = sqlite3.connect("local_cache.db")
     cursor = conn.cursor()
 
-    cursor.execute("DELETE FROM logs")
-    for record in data:
+    for root, dirs, files in os.walk(SOURCE_DIRECTORY):
+        for file in files:
+            if file.endswith('.log'):
+                file_path = os.path.join(root, file)
+
+                cursor.execute("SELECT 1 FROM processed_logs WHERE file_path = ?", (file_path,))
+                if cursor.fetchone():
+                    continue
+
+                parsed = parse_log_file(file_path)
+                new_data.append(parsed)
+                cursor.execute("INSERT OR IGNORE INTO processed_logs (file_path) VALUES (?)", (file_path,))
+
+    for record in new_data:
         cursor.execute("INSERT INTO logs (data) VALUES (?)", (json.dumps(record),))
 
     conn.commit()
     conn.close()
 
-
-def export_to_excel():
-    conn = sqlite3.connect("local_cache.db")
-    cursor = conn.cursor()
-
-    cursor.execute("SELECT data FROM logs")
-    rows = cursor.fetchall()
-    conn.close()
-
-    # Keep only rows where 'Failure Reason' == 'None'
-    all_data = []
-    for row in rows:
-        record = json.loads(row[0])
-        if record.get("Failure Reason", "").strip().lower() == "none":
-            all_data.append(record)
-
-    if not all_data:
-        return  # Nothing to export
-
-    wb = openpyxl.Workbook()
-    ws = wb.active
-
-    headers = set()
-    for data in all_data:
-        headers.update(data.keys())
-    headers = list(headers)
-    ws.append(headers)
-
-    for data in all_data:
-        row = [data.get(h, "") for h in headers]
-        ws.append(row)
-
-    wb.save(SHAREPOINT_EXCEL_PATH)
-
-
-
-
-def parse_and_process():
-    all_data = []
-    for root, dirs, files in os.walk(SOURCE_DIRECTORY):
-        for file in files:
-            if file.endswith('.log'):
-                file_path = os.path.join(root, file)
-                parsed = parse_log_file(file_path)
-                all_data.append(parsed)
-
-    if all_data:
-        cache_locally(all_data)
-        export_to_excel()
+    if new_data:
+        append_to_csv(new_data)
 
 def periodic_loop():
     while True:
         parse_and_process()
-        time.sleep(20)  # Every 2 minutes
+        time.sleep(120)  # Every 2 minutes
+
+# === TRAY ICON ===
 
 def setup_tray_icon():
-    # Create a small tray icon image
+    # Create tray icon
     img = Image.new('RGB', (64, 64), "white")
     d = ImageDraw.Draw(img)
     d.rectangle([10, 10, 54, 54], fill="blue")
@@ -126,10 +130,8 @@ def setup_tray_icon():
         item('Quit', on_quit)
     )
 
-    # Start periodic thread
     threading.Thread(target=periodic_loop, daemon=True).start()
-
     icon.run()
 
-# Run the tray app
+# === START TRAY APP ===
 setup_tray_icon()
