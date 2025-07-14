@@ -8,6 +8,7 @@ import tkinter as tk
 from pystray import Icon, MenuItem as item, Menu
 from PIL import Image, ImageDraw
 from datetime import datetime
+from collections import OrderedDict
 import hashlib
 
 # === SETUP: SQLite database for deduplication ===
@@ -26,7 +27,7 @@ conn.close()
 # === CONFIGURATION ===
 # Contains hardcoded paths and refresh settings
 DEFAULT_SETTINGS = {
-    "csv_dir": r"C:\Users\chets\OneDrive - aquacal.com\Desktop\Test\EoL_test.csv",
+    "csv_dir": r"C:\CSVDashboard\EoL_test.csv",
     "refresh_interval": 30, # How often the parser runs (in seconds)
     "source_dir": r"C:\Users\chets\OneDrive - aquacal.com\Desktop\ChlorSync Powercenter Test Results"
 } 
@@ -40,12 +41,36 @@ current_status = "Idle"
 # === PARSES a single log file ===
 # Extracts key-value pairs from each line formatted like: "Key: Value"
 def parse_log_file(file_path):
-    data = {}
+    data = OrderedDict()
+    current_scope = None # Will be 'Forward', 'Reverse', or None
+    scoped_keys = {
+        "Reported Voltage [Actual +/-10%]",
+        "Actual Voltage",
+        "Reported Current [Actual +/-20%]",
+        "Actual Current"
+    }
     with open(file_path, 'r') as file:
         for line in file:
+            line = line.strip()
+            # Detect Forward/Reverse section headers
+            if line.lower().startswith("forward:"):
+                current_scope = "Forward"
+                continue
+            elif line.lower().startswith("reverse:"):
+                current_scope = "Reverse"
+                continue       
+            
+            # Parse key-value lines
             if ':' in line:
                 key, value = line.split(':', 1)
-                data[key.strip()] = value.strip()
+                key = key.strip()
+                value = value.strip()
+                
+                # Only prefix key if it's in the scoped set
+                if key in scoped_keys and current_scope:
+                    data[f"{current_scope} {key}"] = value
+                else:
+                    data[key] = value
     return data
 
 # === APPENDS new unique records to the CSV ===
@@ -55,12 +80,15 @@ def append_to_csv(new_data):
         return
 
     file_path = DEFAULT_SETTINGS["csv_dir"]
-    
+
     # Collect all unique keys across new records for the CSV header
-    headers = set()
+    all_keys = []
+    seen = set()
     for record in new_data:
-        headers.update(record.keys())
-    headers = list(headers)
+        for key in record:
+            if key not in seen:
+                seen.add(key)
+                all_keys.append(key)
 
     # Keep trying to open the file until it becomes available
     while True:
@@ -68,7 +96,7 @@ def append_to_csv(new_data):
             file_exists = os.path.isfile(file_path)
 
             with open(file_path, mode='a', newline='', encoding='utf-8') as csvfile:
-                writer = csv.DictWriter(csvfile, fieldnames=headers)
+                writer = csv.DictWriter(csvfile, fieldnames=all_keys)
                 if not file_exists:
                     writer.writeheader()
                 for record in new_data:
@@ -107,8 +135,7 @@ def parse_and_process():
                 cursor.execute("SELECT 1 FROM logs WHERE data = ?", (record_hash,))
                 if cursor.fetchone():
                     continue  # already processed
-                # Add timestamp only after hash calculation
-                parsed["Parsed Timestamp"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                
                 # Store hash and queue record for CSV
                 cursor.execute("INSERT INTO logs (data) VALUES (?)", (record_hash,))
                 new_data.append(parsed)

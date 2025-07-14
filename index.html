@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>ChlorSync Test Dashboard</title>
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<style>
+  body {
+    font-family: sans-serif;
+    font-size: 13px; /* Slightly larger */
+    padding: 10px;
+  }
+
+  h2 {
+    margin-bottom: 10px;
+    font-size: 18px;
+  }
+
+  .filters {
+    margin-bottom: 10px;
+    font-size: 13px;
+  }
+
+  .filters select {
+    margin-right: 20px;
+    min-width: 160px;
+  }
+
+  table.dataTable {
+    font-size: 13px;
+    width: 100% !important;
+    table-layout: auto; /* Allow shrinking */
+    border-collapse: collapse;
+  }
+
+  table.dataTable th {
+    white-space: normal !important;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    padding: 4px 6px;
+  }
+
+  table.dataTable td {
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    padding: 4px 6px;
+  }
+</style>
+
+
+</head>
+<body>
+  <h2>Power Center Test Dashboard</h2>
+
+<div class="filters">
+  <label>
+    Result:
+    <select id="filterResult">
+      <option value="">All</option>
+    </select>
+  </label>
+  <label>
+    Mode:
+    <select id="filterMode">
+      <option value="">All</option>
+    </select>
+  </label>
+  <label>
+    Version:
+    <select id="filterVersion">
+      <option value="">All</option>
+    </select>
+  </label>
+  <label>
+    Failure Reason:
+    <select id="filterFailure">
+      <option value="">All</option>
+    </select>
+  </label>
+</div>
+
+
+  <table id="csvTable" class="display" width="100%"></table>
+
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
