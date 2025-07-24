@@ -1,5 +1,6 @@
 import os
 import time
+import re
 import json
 import threading
 import sqlite3
@@ -128,9 +129,22 @@ def parse_and_process():
             if file.endswith('.log'):
                 file_path = os.path.join(root, file)
                 parsed = parse_log_file(file_path)
+                
+                # Extract date from filename (YYYYMMDD at the start)
+                filename = os.path.basename(file_path)
+                match = re.match(r"\d{8}", filename)
+                
+                if match:
+                    raw_date = match.group(0) # e.g., 20231212
+                    # Convert to YYYY-MM-DD
+                    date_value = datetime.strptime(raw_date, "%Y%m%d").strftime("%Y-%m-%d")
+                    parsed["Date"] = date_value
+                else:
+                    parsed["Date"] = "" # fallback if filename doesn't match expected format.
+                
                 # Hash the content BEFORE adding timestamp to avoid unique hash each time
                 record_hash = hashlib.md5(json.dumps(parsed, sort_keys=True).encode()).hexdigest() # hash before adding timestamp
-
+                    
                 # Skip if we've already seen this record
                 cursor.execute("SELECT 1 FROM logs WHERE data = ?", (record_hash,))
                 if cursor.fetchone():
