@@ -2,89 +2,146 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>ChlorSync Test Dashboard</title>
+  <title>Power Center Test Dashboard</title>
+
+  <!-- DataTables CSS -->
   <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
-<style>
-  body {
-    font-family: sans-serif;
-    font-size: 13px; /* Slightly larger */
-    padding: 10px;
-  }
+  <!-- Bootstrap CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
 
-  h2 {
-    margin-bottom: 10px;
-    font-size: 18px;
-  }
-
-  .filters {
-    margin-bottom: 10px;
-    font-size: 13px;
-  }
-
-  .filters select {
-    margin-right: 20px;
-    min-width: 160px;
-  }
-
-  table.dataTable {
-    font-size: 13px;
-    width: 100% !important;
-    table-layout: auto; /* Allow shrinking */
-    border-collapse: collapse;
-  }
-
-  table.dataTable th {
-    white-space: normal !important;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-    padding: 4px 6px;
-  }
-
-  table.dataTable td {
-    white-space: nowrap;
-    text-overflow: ellipsis;
-    overflow: hidden;
-    padding: 4px 6px;
-  }
-</style>
-
-
+  <style>
+    body {
+      font-family: sans-serif;
+      font-size: 13px;
+      padding: 20px;
+    }
+    h2 {
+      margin-bottom: 20px;
+      font-size: 22px;
+    }
+    .filters {
+      margin: 10px 0;
+      font-size: 13px;
+    }
+    .filters label {
+      margin-right: 20px;
+    }
+    .filters select {
+      min-width: 150px;
+    }
+    table.dataTable {
+      font-size: 13px;
+      width: 100% !important;
+      table-layout: auto;
+      border-collapse: collapse;
+    }
+    table.dataTable th {
+      white-space: normal !important;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      padding: 4px 6px;
+    }
+    table.dataTable td {
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      overflow: hidden;
+      padding: 4px 6px;
+    }
+    .tab-content {
+      margin-top: 15px;
+    }
+    canvas {
+      max-width: 100%;
+    }
+  </style>
 </head>
 <body>
   <h2>Power Center Test Dashboard</h2>
 
-<div class="filters">
-  <label>
-    Result:
-    <select id="filterResult">
-      <option value="">All</option>
-    </select>
-  </label>
-  <label>
-    Mode:
-    <select id="filterMode">
-      <option value="">All</option>
-    </select>
-  </label>
-  <label>
-    Version:
-    <select id="filterVersion">
-      <option value="">All</option>
-    </select>
-  </label>
-  <label>
-    Failure Reason:
-    <select id="filterFailure">
-      <option value="">All</option>
-    </select>
-  </label>
-</div>
+  <!-- Nav Tabs -->
+  <ul class="nav nav-tabs" id="dashboardTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="live-tab" data-bs-toggle="tab" data-bs-target="#live" type="button" role="tab">
+        Today’s Data
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#history" type="button" role="tab">
+        Full History
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="analytics-tab" data-bs-toggle="tab" data-bs-target="#analytics" type="button" role="tab">
+        Analytics
+      </button>
+    </li>
+  </ul>
 
+  <div class="tab-content">
+    <!-- Today’s Data Tab -->
+    <div class="tab-pane fade show active" id="live" role="tabpanel">
+      <div class="filters">
+        <label>Result:
+          <select id="filterResultToday"><option value="">All</option></select>
+        </label>
+        <label>Mode:
+          <select id="filterModeToday"><option value="">All</option></select>
+        </label>
+        <label>Version:
+          <select id="filterVersionToday"><option value="">All</option></select>
+        </label>
+        <label>Failure Reason:
+          <select id="filterFailureToday"><option value="">All</option></select>
+        </label>
+      </div>
+      <table id="tableToday" class="display" width="100%"></table>
+    </div>
 
-  <table id="csvTable" class="display" width="100%"></table>
+    <!-- Full History Tab -->
+    <div class="tab-pane fade" id="history" role="tabpanel">
+      <div class="filters">
+        <label>Result:
+          <select id="filterResultAll"><option value="">All</option></select>
+        </label>
+        <label>Mode:
+          <select id="filterModeAll"><option value="">All</option></select>
+        </label>
+        <label>Version:
+          <select id="filterVersionAll"><option value="">All</option></select>
+        </label>
+        <label>Failure Reason:
+          <select id="filterFailureAll"><option value="">All</option></select>
+        </label>
+      </div>
+      <table id="tableAll" class="display" width="100%"></table>
+    </div>
 
+    <!-- Analytics Tab -->
+    <div class="tab-pane fade" id="analytics" role="tabpanel">
+      <div class="row">
+        <div class="col-md-6">
+          <h5>Pass vs Fail</h5>
+          <canvas id="passFailChart"></canvas>
+        </div>
+        <div class="col-md-6">
+          <h5>Failure Reasons</h5>
+          <canvas id="failureReasonChart"></canvas>
+        </div>
+      </div>
+      <div class="row mt-4">
+        <div class="col-md-12">
+          <h5>Daily Test Count</h5>
+          <canvas id="dailyTrendChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- JS Dependencies -->
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
   <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
